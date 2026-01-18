@@ -5,6 +5,7 @@
 package database
 
 import (
+	"database/sql"
 	"time"
 )
 
@@ -15,4 +16,31 @@ type City struct {
 	Lat       float64
 	Lon       float64
 	CreatedAt time.Time
+}
+
+type WeatherCache struct {
+	ID          int64
+	CityID      sql.NullInt64
+	CityName    sql.NullString
+	Country     sql.NullString
+	Lat         sql.NullFloat64
+	Lon         sql.NullFloat64
+	WeatherMain sql.NullString
+	WeatherDesc sql.NullString
+	WeatherIcon sql.NullString
+	Temp        sql.NullFloat64
+	FeelsLike   sql.NullFloat64
+	TempMin     sql.NullFloat64
+	TempMax     sql.NullFloat64
+	Humidity    sql.NullInt64
+	Pressure    sql.NullInt64
+	WindSpeed   sql.NullFloat64
+	WindDeg     sql.NullInt64
+	WindGust    sql.NullFloat64
+	Rain1h      sql.NullFloat64
+	Cloudiness  sql.NullInt64
+	Visibility  sql.NullInt64
+	WeatherTime sql.NullInt64
+	FetchedAt   sql.NullInt64
+	Timezone    sql.NullInt64
 }

@@ -52,3 +52,95 @@ func (q *Queries) DeleteCity(ctx context.Context, id int64) error {
 	_, err := q.db.ExecContext(ctx, deleteCity, id)
 	return err
 }
+
+const findCity = `-- name: FindCity :many
+SELECT id, name, country, lat, lon, created_at
+FROM cities
+WHERE LOWER(name)=LOWER(?)
+`
+
+func (q *Queries) FindCity(ctx context.Context, lower string) ([]City, error) {
+	rows, err := q.db.QueryContext(ctx, findCity, lower)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []City
+	for rows.Next() {
+		var i City
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Country,
+			&i.Lat,
+			&i.Lon,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const findCityWithID = `-- name: FindCityWithID :one
+SELECT id, name, country, lat, lon, created_at
+FROM cities
+WHERE id = ?
+`
+
+func (q *Queries) FindCityWithID(ctx context.Context, id int64) (City, error) {
+	row := q.db.QueryRowContext(ctx, findCityWithID, id)
+	var i City
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Country,
+		&i.Lat,
+		&i.Lon,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const fuzzYFindCity = `-- name: FuzzYFindCity :many
+SELECT id, name, country, lat, lon, created_at
+FROM cities
+WHERE name like ?
+`
+
+func (q *Queries) FuzzYFindCity(ctx context.Context, name string) ([]City, error) {
+	rows, err := q.db.QueryContext(ctx, fuzzYFindCity, name)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []City
+	for rows.Next() {
+		var i City
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Country,
+			&i.Lat,
+			&i.Lon,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

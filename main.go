@@ -7,37 +7,20 @@ import (
 	"errors"
 	"fmt"
 	"github/Arnab-cloud/tui_weather_app/internal/database"
-	"io"
 	"log"
 	"net/http"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
 )
 
-type City struct {
-	Name    string  `json:"name"`
-	Country string  `json:"country"`
-	Lat     float64 `json:"lat"`
-	Lon     float64 `json:"lon"`
-	Id      int     `json:"id"`
-}
-
-type Coordinates struct {
-	Lat float64 `json:"lat"`
-	Lon float64 `json:"lon"`
-}
-
-type rawCity struct {
-	Name    string      `json:"name"`
-	Country string      `json:"country"`
-	Coord   Coordinates `json:"coord"`
-	Id      int         `json:"id"`
-}
-
-type SavedCities struct {
-	Cities []City `json:"cities"`
+type location struct {
+	Name  string      `json:"name"`
+	Coord Coordinates `json:"coord"`
+	Id    int         `json:"id"`
 }
 
 type apiConfig struct {
@@ -46,56 +29,88 @@ type apiConfig struct {
 
 var savedCities = make(map[string]City)
 
-func getCityInfo(cityName string, limit int) (City, error) {
-	err := godotenv.Load()
-	if err != nil {
-		return City{}, fmt.Errorf("Error loading env variables: %s", err)
+func GetCityInfoFromDB(db *database.Queries, loc location) ([]City, error) {
+	if loc.Id != 0 {
+		data, err := db.FindCityWithID(context.Background(), int64(loc.Id))
+		if err != nil {
+			return nil, err
+		}
+		return []City{City{Name: data.Name, Country: data.Country, Lat: data.Lat, Lon: data.Lon, Id: int(data.ID)}}, nil
+	} else if loc.Name != "" {
+		var cities []City
+		query := loc.Name + "%"
+		data, err := db.FuzzYFindCity(context.Background(), query)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(data) == 0 {
+			return nil, errors.New("no matching city found")
+		}
+
+		for _, city := range data {
+			cities = append(cities, City{Name: city.Name, Country: city.Country, Lat: city.Lat, Lon: city.Lon, Id: int(city.ID)})
+		}
+
+		return cities, nil
 	}
-
-	Weather_Api := os.Getenv("WEATHER_API")
-	if Weather_Api == "" {
-		return City{}, fmt.Errorf("Error loading Weather Api stirng: %s", err)
-	}
-
-	Api_Key := os.Getenv("API_KEY")
-	if Api_Key == "" {
-		return City{}, fmt.Errorf("Error loading Api_key Api stirng: %s", err)
-	}
-
-	requestUrl := fmt.Sprintf("%s/direct?q=%s&limit=%d&appid=%s", Weather_Api, cityName, limit, Api_Key)
-	resp, err := http.Get(requestUrl)
-	if err != nil {
-		return City{}, fmt.Errorf("Error in getting city info: %s", err)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-
-	if err != nil {
-		return City{}, fmt.Errorf("Error reading city info api response: %s", err)
-	}
-
-	resp.Body.Close()
-
-	if resp.StatusCode > 299 {
-		return City{}, fmt.Errorf("Response failed with status code: %d and\nbody: %s\n", resp.StatusCode, body)
-	}
-
-	cities, err := readCityInfo(body)
-	if err != nil {
-		return City{}, err
-	}
-
-	if len(cities) == 0 {
-		return City{}, errors.New("No cities found")
-	}
-
-	return cities[0], nil
+	return nil, errors.New("no matching city found")
 }
 
-func readCityInfo(data []byte) ([]City, error) {
+func GetCityInfoFromAPI(ctx context.Context, client *http.Client, loc location, limit int) ([]City, error) {
+	baseURL := os.Getenv("GEOCODING_API")
+	if baseURL == "" {
+		return nil, errors.New("WEATHER_API not set")
+	}
+
+	apiKey := os.Getenv("API_KEY")
+	if apiKey == "" {
+		return nil, errors.New("API_KEY not set")
+	}
+
+	var url string
+
+	if loc.Coord.Lat != 0 && loc.Coord.Lon != 0 {
+		url = fmt.Sprintf(
+			"%s/reverse?lat=%f&lon=%f&limit=%d&appid=%s",
+			baseURL,
+			loc.Coord.Lat,
+			loc.Coord.Lon,
+			limit,
+			apiKey,
+		)
+	} else if loc.Name != "" {
+		url = fmt.Sprintf(
+			"%s/direct?q=%s&limit=%d&appid=%s",
+			baseURL,
+			loc.Name,
+			limit,
+			apiKey,
+		)
+	} else {
+		return nil, errors.New("no valid location city provided")
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	cities, err := FetchAndDecode[[]City](client, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(*cities) == 0 {
+		return nil, errors.New("no cities found")
+	}
+	return *cities, nil
+}
+
+func readCityInfo(city []byte) ([]City, error) {
 	var cities []City
 
-	err := json.Unmarshal(data, &cities)
+	err := json.Unmarshal(city, &cities)
 	if err != nil {
 		return nil, err
 	}
@@ -105,12 +120,13 @@ func readCityInfo(data []byte) ([]City, error) {
 func readCityFromFile() {
 	fileName := "sample_res.json"
 
-	data, err := os.ReadFile(fileName)
+	city, err := os.ReadFile(fileName)
 	if err != nil {
 		log.Fatalf("error reading response file: %v", err)
 	}
 
-	cities, err := readCityInfo(data)
+	cities, err := readCityInfo(city)
+
 	if err != nil {
 		log.Fatalf("error reading json: %v", err)
 	}
@@ -148,7 +164,7 @@ func insertBatch(ctx context.Context, db *sql.DB, batch []database.CreateCityPar
 	return tnx.Commit()
 }
 
-func loadDataIntoDB(conn *sql.DB) {
+func loadcityIntoDB(conn *sql.DB) {
 	fileName := "city.list.json"
 	file, err := os.Open(fileName)
 
@@ -170,13 +186,16 @@ func loadDataIntoDB(conn *sql.DB) {
 	count := 0
 
 	for decoder.More() {
-		var city rawCity
+		var city struct {
+			Country string `json:"country"`
+			location
+		}
 
 		if err := decoder.Decode(&city); err != nil {
 			log.Fatalf("Error reading the docs from file: %v", err)
 		}
 
-		log.Printf("data: %v", count)
+		log.Printf("city: %v", count)
 		count++
 
 		batch = append(batch, database.CreateCityParams{
@@ -203,23 +222,123 @@ func loadDataIntoDB(conn *sql.DB) {
 	}
 }
 
+func readWeatherResponseFile() error {
+	fileName := "sample_res.json"
+	var weatherRes WeatherResponse
+
+	city, err := os.ReadFile(fileName)
+	if err != nil {
+		return fmt.Errorf("Error while reading the response file: %v", err)
+	}
+
+	if err := json.Unmarshal(city, &weatherRes); err != nil {
+		return fmt.Errorf("Error while unmarshalling the weather response: %v", err)
+	}
+
+	fmt.Printf("city:\n%v", weatherRes)
+
+	return nil
+}
+
+func GetWeatherInfo(db *database.Queries, client *http.Client, loc location) error {
+	if loc.Coord.Lat != 0 && loc.Coord.Lon != 0 {
+		return GetWeatherInfoFromCoord(db, client, loc.Coord)
+	} else if loc.Name != "" {
+		if cities, err := GetCityInfoFromAPI(context.Background(), client, loc, 10); err != nil {
+			return err
+		} else {
+			return GetWeatherInfoFromCoord(db, client, Coordinates{Lat: cities[0].Lat, Lon: cities[0].Lon})
+		}
+	}
+	return errors.New("not enough information to get weather info")
+}
+
+func GetWeatherInfoFromCoord(db *database.Queries, client *http.Client, coord Coordinates) error {
+
+	lastUpdated := sql.NullInt64{Int64: time.Now().Add(-5 * time.Minute).Unix(), Valid: true}
+	query := database.GetFreshWeatherByCoordsParams{
+		Lat:       sql.NullFloat64{Float64: coord.Lat, Valid: true},
+		Lon:       sql.NullFloat64{Float64: coord.Lon, Valid: true},
+		FetchedAt: lastUpdated,
+	}
+	if city, err := db.GetFreshWeatherByCoords(context.Background(), query); err == nil {
+		fmt.Print(city)
+		return nil
+	}
+	log.Printf("No cached value or old cached value")
+
+	city, err := getWeatherInfoAPI(client, coord, 0, "")
+	if err != nil {
+		return fmt.Errorf("Failed to fetch weather info: %s", err)
+	}
+
+	err = db.InsertWeather(context.Background(), city.ToDBWeather())
+
+	fmt.Print(city)
+	return err
+
+}
+
+func getWeatherInfoAPI(client *http.Client, coord Coordinates, cityCode int, cityName string) (*WeatherResponse, error) {
+	weatherURL := os.Getenv("WEATHER_API")
+	if weatherURL == "" {
+		return nil, errors.New("no weather url found in the environtment")
+	}
+	apiKey := os.Getenv("API_KEy")
+	if apiKey == "" {
+		return nil, errors.New("no api key found in the environtment")
+	}
+
+	requestURI := weatherURL
+	if (Coordinates{}) != coord {
+		requestURI += fmt.Sprintf("?lat=%f&lon=%f", coord.Lat, coord.Lon)
+	} else if cityCode != 0 {
+		requestURI += fmt.Sprintf("?id=%d", cityCode)
+	} else if cityName != "" {
+		requestURI += fmt.Sprintf("?q=%s", cityName)
+	} else {
+		return nil, errors.New("either cityCode or cityName must be non zero")
+	}
+
+	requestURI += fmt.Sprintf("&appid=%s", apiKey)
+
+	req, err := http.NewRequest("GET", requestURI, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return FetchAndDecode[WeatherResponse](client, req)
+}
+
+func GetCityInfo(db *database.Queries, client *http.Client, loc location) ([]City, error) {
+	if cities, err := GetCityInfoFromDB(db, loc); err == nil {
+		return cities, nil
+	}
+
+	log.Print("city info not found in db")
+	log.Print("calling the geocoding api")
+
+	return GetCityInfoFromAPI(context.Background(), client, loc, 10)
+}
+
 func main() {
-	// city, err := getCityInfo("Kolkata", 1)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	//
-	// readCityFromFile()
-	// data, err := getCityInfo("kolkata", 1)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// readCityFromFile()
+
+	cityName := "Kolkata"
+	commandArgs := os.Args[1:]
+	if len(commandArgs) == 0 {
+		log.Printf("No city name provided, using default: %s", cityName)
+	} else {
+		cityName = strings.Join(commandArgs, " ")
+		log.Printf("Loooking up weather for city: %s", cityName)
+	}
+
 	godotenv.Load()
 	dbURL := os.Getenv("DB_URL")
 	if dbURL == "" {
 		log.Fatal("Db url not found")
 	}
+	client := &http.Client{}
+	defer client.CloseIdleConnections()
 
 	conn, err := sql.Open("sqlite3", dbURL)
 	if err != nil {
@@ -227,20 +346,17 @@ func main() {
 	}
 	defer conn.Close()
 
-	// queries := database.New(conn)
+	queries := database.New(conn)
 
-	// apiCfg := apiConfig{
-	// 	DB: queries,
-	// }
+	apiCfg := apiConfig{
+		DB: queries,
+	}
 
-	// // data := database.CreateCityParams{ID: 1000000, Name: "first city", Country: "first country", Lat: 12.234, Lon: 233.334}
+	cities, err := GetCityInfo(apiCfg.DB, client, location{Name: cityName})
 
-	// // dbCitym, err := apiCfg.DB.CreateCity(context.Background(), data)
-	// err = apiCfg.DB.DeleteCity(context.Background(), 1000000)
-	// if err != nil {
-	// 	log.Fatalf("Error executing the query: %v", err)
-	// }
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// fmt.Print(dbRes)
-	loadDataIntoDB(conn)
+	fmt.Print(cities)
 }
