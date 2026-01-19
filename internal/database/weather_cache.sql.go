@@ -83,8 +83,10 @@ func (q *Queries) GetFreshWeatherByCity(ctx context.Context, arg GetFreshWeather
 const getFreshWeatherByCoords = `-- name: GetFreshWeatherByCoords :one
 SELECT id, city_id, city_name, country, lat, lon, weather_main, weather_desc, weather_icon, "temp", feels_like, temp_min, temp_max, humidity, pressure, wind_speed, wind_deg, wind_gust, rain_1h, cloudiness, visibility, weather_time, fetched_at, timezone
 FROM weather_cache
-WHERE lat = ?
-  AND lon = ?
+WHERE lat >= ?
+  AND lat <= ?
+  AND lon >= ?
+  AND lon <= ?
   AND fetched_at >= ?
 ORDER BY fetched_at DESC
 LIMIT 1
@@ -92,12 +94,20 @@ LIMIT 1
 
 type GetFreshWeatherByCoordsParams struct {
 	Lat       sql.NullFloat64
+	Lat_2     sql.NullFloat64
 	Lon       sql.NullFloat64
+	Lon_2     sql.NullFloat64
 	FetchedAt sql.NullInt64
 }
 
 func (q *Queries) GetFreshWeatherByCoords(ctx context.Context, arg GetFreshWeatherByCoordsParams) (WeatherCache, error) {
-	row := q.db.QueryRowContext(ctx, getFreshWeatherByCoords, arg.Lat, arg.Lon, arg.FetchedAt)
+	row := q.db.QueryRowContext(ctx, getFreshWeatherByCoords,
+		arg.Lat,
+		arg.Lat_2,
+		arg.Lon,
+		arg.Lon_2,
+		arg.FetchedAt,
+	)
 	var i WeatherCache
 	err := row.Scan(
 		&i.ID,
@@ -211,19 +221,31 @@ func (q *Queries) GetLatestWeatherByCityID(ctx context.Context, cityID sql.NullI
 const getLatestWeatherByCoords = `-- name: GetLatestWeatherByCoords :one
 SELECT id, city_id, city_name, country, lat, lon, weather_main, weather_desc, weather_icon, "temp", feels_like, temp_min, temp_max, humidity, pressure, wind_speed, wind_deg, wind_gust, rain_1h, cloudiness, visibility, weather_time, fetched_at, timezone
 FROM weather_cache
-WHERE lat = ?
-  AND lon = ?
+WHERE lat >= ?
+  AND lat <= ?
+  AND lon >= ?
+  AND lon <= ?
+  AND fetched_at >= ?
 ORDER BY fetched_at DESC
 LIMIT 1
 `
 
 type GetLatestWeatherByCoordsParams struct {
-	Lat sql.NullFloat64
-	Lon sql.NullFloat64
+	Lat       sql.NullFloat64
+	Lat_2     sql.NullFloat64
+	Lon       sql.NullFloat64
+	Lon_2     sql.NullFloat64
+	FetchedAt sql.NullInt64
 }
 
 func (q *Queries) GetLatestWeatherByCoords(ctx context.Context, arg GetLatestWeatherByCoordsParams) (WeatherCache, error) {
-	row := q.db.QueryRowContext(ctx, getLatestWeatherByCoords, arg.Lat, arg.Lon)
+	row := q.db.QueryRowContext(ctx, getLatestWeatherByCoords,
+		arg.Lat,
+		arg.Lat_2,
+		arg.Lon,
+		arg.Lon_2,
+		arg.FetchedAt,
+	)
 	var i WeatherCache
 	err := row.Scan(
 		&i.ID,

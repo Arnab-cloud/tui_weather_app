@@ -13,21 +13,24 @@ WHERE city_name = ?
 ORDER BY fetched_at DESC
 LIMIT 1;
 
-
 -- name: GetLatestWeatherByCoords :one
 SELECT *
 FROM weather_cache
-WHERE lat = ?
-  AND lon = ?
+WHERE lat >= ?
+  AND lat <= ?
+  AND lon >= ?
+  AND lon <= ?
+  AND fetched_at >= ?
 ORDER BY fetched_at DESC
 LIMIT 1;
-
 
 -- name: GetFreshWeatherByCoords :one
 SELECT *
 FROM weather_cache
-WHERE lat = ?
-  AND lon = ?
+WHERE lat >= ?
+  AND lat <= ?
+  AND lon >= ?
+  AND lon <= ?
   AND fetched_at >= ?
 ORDER BY fetched_at DESC
 LIMIT 1;
@@ -71,11 +74,9 @@ INSERT INTO weather_cache (
 );
 
 
-
 -- name: DeleteOldWeather :exec
 DELETE FROM weather_cache
 WHERE fetched_at < ?;
-
 
 -- name: DeleteDuplicateWeather :exec
 DELETE FROM weather_cache
@@ -84,8 +85,6 @@ WHERE id NOT IN (
     FROM weather_cache
     GROUP BY city_id
 );
-
-
 
 -- name: GetWeatherHistoryByCity :many
 SELECT *

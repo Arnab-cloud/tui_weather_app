@@ -19,10 +19,10 @@ type BasicWeather struct {
 }
 
 type MainWeather struct {
-	Temp        float32 `json:"temp"`
-	FeelsLike   float32 `json:"feels_like"`
-	TempMin     float32 `json:"temp_min"`
-	TempMax     float32 `json:"temp_max"`
+	Temp        float64 `json:"temp"`
+	FeelsLike   float64 `json:"feels_like"`
+	TempMin     float64 `json:"temp_min"`
+	TempMax     float64 `json:"temp_max"`
 	Pressure    int     `json:"pressure"`
 	Humidity    int     `json:"humidity"`
 	SeaLevel    int     `json:"sea_level"`
@@ -30,8 +30,8 @@ type MainWeather struct {
 }
 
 type Wind struct {
-	Speed float32 `json:"speed"`
-	Gust  float32 `json:"gust"`
+	Speed float64 `json:"speed"`
+	Gust  float64 `json:"gust"`
 	Deg   int     `json:"deg"`
 }
 
@@ -48,7 +48,7 @@ type WeatherResponse struct {
 	Main     MainWeather    `json:"main"`
 	Wind     Wind           `json:"wind"`
 	Coord    Coordinates    `json:"coord"`
-	Rain     float32        `json:"rain.1h"`
+	Rain     float64        `json:"rain.1h"`
 	Base     string         `json:"base"`
 	Name     string         `json:"name"`
 	DT       int64          `json:"dt"`
@@ -65,6 +65,59 @@ type City struct {
 	Lat     float64 `json:"lat"`
 	Lon     float64 `json:"lon"`
 	Id      int     `json:"id"`
+}
+
+type Location struct {
+	Name  string      `json:"name"`
+	Coord Coordinates `json:"coord"`
+	Id    int         `json:"id"`
+}
+
+func WeatherCacheToResponse(w database.WeatherCache) WeatherResponse {
+	return WeatherResponse{
+		ID:   int(w.ID),
+		Name: nullString(w.CityName),
+		DT:   nullInt64(w.WeatherTime),
+		COD:  200, // cached result is assumed OK
+		Base: "stations",
+
+		Timezone: nullInt(w.Timezone),
+		Vis:      nullInt(w.Visibility),
+		Clouds:   nullInt(w.Cloudiness),
+
+		Coord: Coordinates{
+			Lat: nullFloat64(w.Lat),
+			Lon: nullFloat64(w.Lon),
+		},
+
+		Weather: []BasicWeather{
+			{
+				Type: nullString(w.WeatherMain),
+				Desc: nullString(w.WeatherDesc),
+				Icon: nullString(w.WeatherIcon),
+				Id:   0, // not present in cache
+			},
+		},
+
+		Main: MainWeather{
+			Temp:        nullFloat64(w.Temp),
+			FeelsLike:   nullFloat64(w.FeelsLike),
+			TempMin:     nullFloat64(w.TempMin),
+			TempMax:     nullFloat64(w.TempMax),
+			Pressure:    nullInt(w.Pressure),
+			Humidity:    nullInt(w.Humidity),
+			SeaLevel:    0, // not stored
+			GroundLevel: 0, // not stored
+		},
+
+		Wind: Wind{
+			Speed: nullFloat64(w.WindSpeed),
+			Gust:  nullFloat64(w.WindGust),
+			Deg:   nullInt(w.WindDeg),
+		},
+
+		Rain: nullFloat64(w.Rain1h),
+	}
 }
 
 func (res *WeatherResponse) ToDBWeather() database.InsertWeatherParams {
@@ -121,4 +174,32 @@ func (res *WeatherResponse) ToDBWeather() database.InsertWeatherParams {
 		FetchedAt:   sql.NullInt64{Int64: now, Valid: true},
 		Timezone:    sql.NullInt64{Int64: int64(res.Timezone), Valid: true},
 	}
+}
+
+func nullString(ns sql.NullString) string {
+	if ns.Valid {
+		return ns.String
+	}
+	return ""
+}
+
+func nullInt64(ni sql.NullInt64) int64 {
+	if ni.Valid {
+		return ni.Int64
+	}
+	return 0
+}
+
+func nullInt(ni sql.NullInt64) int {
+	if ni.Valid {
+		return int(ni.Int64)
+	}
+	return 0
+}
+
+func nullFloat64(nf sql.NullFloat64) float64 {
+	if nf.Valid {
+		return nf.Float64
+	}
+	return 0
 }
