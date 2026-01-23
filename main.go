@@ -60,6 +60,7 @@ type StateModel struct {
 	textInput     textinput.Model
 	searchResults list.Model
 	curItem       *City
+	curWeather    *WeatherResponse
 	isFilterOpen  bool
 	keys          *itemsKeyMap
 	help          help.Model
@@ -235,7 +236,11 @@ func initModel() StateModel {
 	newModel := StateModel{
 		textInput:     ti,
 		searchResults: newsearchResults,
+		curItem:       nil,
+		curWeather:    nil,
 		isFilterOpen:  false,
+		debounceId:    0,
+		err:           nil,
 		keys:          newItemsKeyMap(),
 		help:          help.New(),
 	}
