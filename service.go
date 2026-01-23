@@ -19,9 +19,9 @@ const (
 	CacheDuration = 10 * time.Minute
 )
 
-func NewWeatherService(db *database.Queries, client *WeatherClient) *WeatherService {
+func NewWeatherService(conn *sql.DB, client *WeatherClient) *WeatherService {
 	return &WeatherService{
-		DB:     db,
+		DB:     database.New(conn),
 		Client: client,
 	}
 }
@@ -68,6 +68,8 @@ func (s *WeatherService) ResolveCity(ctx context.Context, name string) ([]City, 
 	query := name + "%"
 	dbCities, err := s.DB.FuzzYFindCity(ctx, query)
 
+	log.Printf("fuzzyfind Error: %s", err)
+
 	if err == nil && len(dbCities) > 0 {
 		for _, dbCity := range dbCities {
 			cities = append(cities, City{
@@ -83,6 +85,7 @@ func (s *WeatherService) ResolveCity(ctx context.Context, name string) ([]City, 
 
 	cities, err = s.Client.FetchGeocoding(ctx, name, 1)
 	if err != nil || len(cities) == 0 {
+		log.Printf("city '%s' not found locally or via API", name)
 		return nil, fmt.Errorf("city '%s' not found locally or via API", name)
 	}
 

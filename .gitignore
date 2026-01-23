@@ -2,5 +2,8 @@ tui_weather_app.exe
 .env
 *.db
 *.json
+*.log
+
+temp
 
 TODO.md

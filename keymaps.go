@@ -1,0 +1,38 @@
+package main
+
+import (
+	"github.com/charmbracelet/bubbles/key"
+)
+
+type itemsKeyMap struct {
+	choose       key.Binding
+	toggleFilter key.Binding
+	quitApp      key.Binding
+}
+
+func (dKeyMp itemsKeyMap) ShortHelp() []key.Binding {
+	return []key.Binding{dKeyMp.choose, dKeyMp.toggleFilter, dKeyMp.quitApp}
+}
+
+func (dKeyMp itemsKeyMap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{dKeyMp.choose, dKeyMp.toggleFilter, dKeyMp.quitApp},
+	}
+}
+
+func newItemsKeyMap() *itemsKeyMap {
+	return &itemsKeyMap{
+		choose: key.NewBinding(
+			key.WithKeys("enter"),
+			key.WithHelp("enter", "Enter to select"),
+		),
+		toggleFilter: key.NewBinding(
+			key.WithKeys("/"),
+			key.WithHelp("/", "Toggle filter"),
+		),
+		quitApp: key.NewBinding(
+			key.WithKeys("q", "ctrl+c"),
+			key.WithHelp("q", "close app"),
+		),
+	}
+}
