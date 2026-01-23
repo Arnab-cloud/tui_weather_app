@@ -35,8 +35,12 @@ var (
 	LogFile *os.File
 )
 
-type searchMsgResult struct {
+type citySearchResultMsg struct {
 	locs []list.Item
+}
+
+type weatherSearchResultMsg struct {
+	weather *WeatherResponse
 }
 
 type debouncedMsg struct {
@@ -57,15 +61,16 @@ func (city City) Description() string {
 func (city City) FilterValue() string { return city.Name }
 
 type StateModel struct {
-	textInput     textinput.Model
-	searchResults list.Model
-	curItem       *City
-	curWeather    *WeatherResponse
-	isFilterOpen  bool
-	keys          *itemsKeyMap
-	help          help.Model
-	err           error
-	debounceId    int
+	textInput         textinput.Model
+	searchResults     list.Model
+	curItem           *City
+	curWeather        *WeatherResponse
+	isFilterOpen      bool
+	isFetchingWeather bool
+	keys              *itemsKeyMap
+	help              help.Model
+	err               error
+	debounceId        int
 }
 
 func (curM *StateModel) debouncedSearch() tea.Cmd {
@@ -76,22 +81,42 @@ func (curM *StateModel) debouncedSearch() tea.Cmd {
 	})
 }
 
-func (curM StateModel) performSearch() tea.Cmd {
+func (curM StateModel) performLocationSearch() tea.Cmd {
 	query := curM.textInput.Value()
 
 	return func() tea.Msg {
 		if len(query) < 3 {
-			return searchMsgResult{locs: nil}
+			return citySearchResultMsg{locs: nil}
 		}
 		cities, err := Service.ResolveCity(context.Background(), query)
 		if err != nil {
-			return searchMsgResult{locs: nil}
+			return citySearchResultMsg{locs: nil}
 		}
 		items := make([]list.Item, len(cities))
 		for i, city := range cities {
 			items[i] = city
 		}
-		return searchMsgResult{locs: items}
+		return citySearchResultMsg{locs: items}
+	}
+}
+
+func (curM StateModel) performWeatherSearch() tea.Cmd {
+	loc := curM.curItem
+	if loc == nil {
+		return nil
+	}
+	if loc.Lat == 0 && loc.Lon == 0 {
+		return nil
+	}
+	return func() tea.Msg {
+		coord := Coordinates{Lat: curM.curItem.Lat, Lon: curM.curItem.Lon}
+		res, err := Service.GetWeather(context.Background(), Location{Name: curM.curItem.Name, Coord: coord, Id: curM.curItem.Id})
+		log.Print("called get weather")
+		if err != nil {
+			log.Printf("error fetching the weather: %s", err)
+			return weatherSearchResultMsg{weather: nil}
+		}
+		return weatherSearchResultMsg{weather: res}
 	}
 }
 
@@ -106,14 +131,18 @@ func (curM StateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		curM.searchResults.SetSize(msg.Width-4, msg.Height-8)
 
-	case searchMsgResult:
+	case citySearchResultMsg:
 		curM.searchResults.SetItems(msg.locs)
+
+	case weatherSearchResultMsg:
+		curM.curWeather = msg.weather
+		curM.isFetchingWeather = false
 
 	case debouncedMsg:
 		if curM.debounceId != msg.id {
 			return curM, nil
 		}
-		return curM, curM.performSearch()
+		return curM, curM.performLocationSearch()
 
 	case errorMsg:
 		curM.err = msg
@@ -144,8 +173,10 @@ func (curM StateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				curM.curItem = &i
 				curM.isFilterOpen = false
 				curM.textInput.Blur()
+				curM.isFetchingWeather = true
+				cmd = curM.performWeatherSearch()
 			}
-			return curM, nil
+			return curM, cmd
 		case key.Matches(msg, curM.keys.escInput):
 			if curM.textInput.Focused() {
 				curM.textInput.Blur()
@@ -177,24 +208,29 @@ func (curM StateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (curM StateModel) View() string {
 
-	if !curM.isFilterOpen && curM.curItem != nil {
+	if curM.isFilterOpen {
+		var s strings.Builder
+		s.WriteString(titleStyle.Render("🌤️  Weather Search"))
+		s.WriteString("\n\n")
+		s.WriteString(curM.textInput.View())
+		s.WriteString("\n\n")
+		s.WriteString(curM.searchResults.View())
+		s.WriteString("\n")
+
+		return s.String()
+	}
+
+	if curM.curItem != nil && curM.isFetchingWeather {
 		return fmt.Sprintf("Selected: %s, %s\nFetching weather...\n",
 			curM.curItem.Title(), curM.curItem.Description())
 	}
 
-	if !curM.isFilterOpen {
-		return "Nothing to show here"
+	if curM.curItem != nil && curM.curWeather != nil {
+		return fmt.Sprintf("weather: %v", *curM.curWeather)
 	}
 
-	var s strings.Builder
-	s.WriteString(titleStyle.Render("🌤️  Weather Search"))
-	s.WriteString("\n\n")
-	s.WriteString(curM.textInput.View())
-	s.WriteString("\n\n")
-	s.WriteString(curM.searchResults.View())
-	s.WriteString("\n")
+	return "Nothing to show here"
 
-	return s.String()
 }
 
 func main() {
@@ -234,15 +270,16 @@ func initModel() StateModel {
 	ti.Width = 40
 
 	newModel := StateModel{
-		textInput:     ti,
-		searchResults: newSearchResults,
-		curItem:       nil,
-		curWeather:    nil,
-		isFilterOpen:  false,
-		debounceId:    0,
-		err:           nil,
-		keys:          newItemsKeyMap(),
-		help:          help.New(),
+		textInput:         ti,
+		searchResults:     newSearchResults,
+		curItem:           nil,
+		curWeather:        nil,
+		isFilterOpen:      false,
+		isFetchingWeather: false,
+		debounceId:        0,
+		err:               nil,
+		keys:              newItemsKeyMap(),
+		help:              help.New(),
 	}
 	newModel.searchResults.Title = "Find Cities"
 	newModel.searchResults.SetShowFilter(false)
