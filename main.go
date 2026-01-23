@@ -19,7 +19,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-const DebounceDuration = time.Second
+const DebounceDuration = 500 * time.Millisecond
 
 var titleStyle = lipgloss.NewStyle().
 	Bold(true).
@@ -37,6 +37,11 @@ var (
 
 type searchMsgResult struct {
 	locs []list.Item
+}
+
+type debouncedMsg struct {
+	id    int
+	query string
 }
 
 type errorMsg struct {
@@ -74,6 +79,14 @@ type StateModel struct {
 	height        int
 }
 
+func (curM *StateModel) debouncedSearch() tea.Cmd {
+	query := curM.textInput.Value()
+	curM.debounceId++
+	return tea.Tick(DebounceDuration, func(_ time.Time) tea.Msg {
+		return debouncedMsg{id: curM.debounceId, query: query}
+	})
+}
+
 func (curM StateModel) performSearch() tea.Cmd {
 	query := curM.textInput.Value()
 
@@ -103,6 +116,12 @@ func (curM StateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case searchMsgResult:
 		curM.searchResults.SetItems(msg.locs)
+
+	case debouncedMsg:
+		if curM.debounceId != msg.id {
+			return curM, nil
+		}
+		return curM, curM.performSearch()
 
 	case errorMsg:
 		curM.err = msg
@@ -155,7 +174,7 @@ func (curM StateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 			curM.textInput, cmd = curM.textInput.Update(msg)
-			return curM, tea.Batch(cmd, curM.performSearch())
+			return curM, tea.Batch(cmd, curM.debouncedSearch())
 		}
 
 	}
