@@ -50,33 +50,21 @@ type errorMsg struct {
 
 func (e errorMsg) Error() string { return e.err.Error() }
 
-type item struct {
-	title, desc string
+func (city City) Title() string { return city.Name }
+func (city City) Description() string {
+	return fmt.Sprintf("%s, Lat: %f, Lon: %f", city.Country, city.Lat, city.Lon)
 }
-
-func citiesToItems(locs []City) []list.Item {
-	cities := make([]list.Item, len(locs))
-	for i, loc := range locs {
-		cities[i] = item{title: loc.Name, desc: fmt.Sprintf("%s, Lat: %f, Lon: %f", loc.Country, loc.Lat, loc.Lon)}
-	}
-	return cities
-}
-
-func (i item) Title() string       { return i.title }
-func (i item) Description() string { return i.desc }
-func (i item) FilterValue() string { return i.title }
+func (city City) FilterValue() string { return city.Name }
 
 type StateModel struct {
 	textInput     textinput.Model
 	searchResults list.Model
-	curitem       *item
+	curItem       *City
 	isFilterOpen  bool
 	keys          *itemsKeyMap
 	help          help.Model
 	err           error
 	debounceId    int
-	width         int
-	height        int
 }
 
 func (curM *StateModel) debouncedSearch() tea.Cmd {
@@ -98,8 +86,11 @@ func (curM StateModel) performSearch() tea.Cmd {
 		if err != nil {
 			return searchMsgResult{locs: nil}
 		}
-
-		return searchMsgResult{locs: citiesToItems(cities)}
+		items := make([]list.Item, len(cities))
+		for i, city := range cities {
+			items[i] = city
+		}
+		return searchMsgResult{locs: items}
 	}
 }
 
@@ -148,8 +139,8 @@ func (curM StateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return curM, nil
 
 		case key.Matches(msg, curM.keys.choose):
-			if i, ok := curM.searchResults.SelectedItem().(item); ok {
-				curM.curitem = &i
+			if i, ok := curM.searchResults.SelectedItem().(City); ok {
+				curM.curItem = &i
 				curM.isFilterOpen = false
 				curM.textInput.Blur()
 			}
@@ -185,9 +176,9 @@ func (curM StateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (curM StateModel) View() string {
 
-	if !curM.isFilterOpen && curM.curitem != nil {
+	if !curM.isFilterOpen && curM.curItem != nil {
 		return fmt.Sprintf("Selected: %s, %s\nFetching weather...\n",
-			curM.curitem.title, curM.curitem.desc)
+			curM.curItem.Title(), curM.curItem.Description())
 	}
 
 	if !curM.isFilterOpen {
@@ -235,33 +226,7 @@ func main() {
 }
 
 func initModel() StateModel {
-	newItems := []list.Item{
-		// item{title: "Coffee", desc: "Freshly brewed hot drink"},
-		// item{title: "Pizza", desc: "Cheesy slice with pepperoni"},
-		// item{title: "Sushi", desc: "Rice rolls with fresh fish"},
-		// item{title: "Burger", desc: "Grilled beef patty with toppings"},
-		// item{title: "Pasta", desc: "Italian noodles in tomato sauce"},
-
-		// item{title: "Library", desc: "Quiet place full of books"},
-		// item{title: "Beach", desc: "Sandy shore by the ocean"},
-		// item{title: "Mountain", desc: "High elevation hiking spot"},
-		// item{title: "Cafe", desc: "Small shop for coffee and snacks"},
-		// item{title: "Park", desc: "Green space for relaxing walks"},
-
-		// item{title: "Laptop", desc: "Portable computer for work"},
-		// item{title: "Headphones", desc: "Noise-canceling audio gear"},
-		// item{title: "Backpack", desc: "Bag for carrying essentials"},
-		// item{title: "Smartphone", desc: "Touchscreen mobile device"},
-		// item{title: "Notebook", desc: "Paper pad for writing notes"},
-
-		// item{title: "Gym", desc: "Place to exercise and train"},
-		// item{title: "Museum", desc: "Exhibits of history and art"},
-		// item{title: "Airport", desc: "Hub for air travel"},
-		// item{title: "Restaurant", desc: "Dine-in food service"},
-		// item{title: "Cinema", desc: "Theater for watching movies"},
-	}
-
-	newsearchResults := list.New(newItems, list.NewDefaultDelegate(), 0, 0)
+	newsearchResults := list.New(nil, list.NewDefaultDelegate(), 0, 0)
 	ti := textinput.New()
 	ti.Placeholder = "Search for a city"
 	ti.CharLimit = 50
