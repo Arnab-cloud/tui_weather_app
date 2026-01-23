@@ -227,7 +227,7 @@ func main() {
 }
 
 func initModel() StateModel {
-	newsearchResults := list.New(nil, list.NewDefaultDelegate(), 0, 0)
+	newSearchResults := list.New(nil, list.NewDefaultDelegate(), 0, 0)
 	ti := textinput.New()
 	ti.Placeholder = "Search for a city"
 	ti.CharLimit = 50
@@ -235,7 +235,7 @@ func initModel() StateModel {
 
 	newModel := StateModel{
 		textInput:     ti,
-		searchResults: newsearchResults,
+		searchResults: newSearchResults,
 		curItem:       nil,
 		curWeather:    nil,
 		isFilterOpen:  false,
