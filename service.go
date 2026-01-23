@@ -68,7 +68,11 @@ func (s *WeatherService) ResolveCity(ctx context.Context, name string) ([]City, 
 	query := name + "%"
 	dbCities, err := s.DB.FuzzYFindCity(ctx, query)
 
-	log.Printf("fuzzyfind Error: %s", err)
+	log.Printf("db queried")
+
+	if err != nil {
+		log.Printf("fuzzyfind Error: %v", err)
+	}
 
 	if err == nil && len(dbCities) > 0 {
 		for _, dbCity := range dbCities {
@@ -84,6 +88,7 @@ func (s *WeatherService) ResolveCity(ctx context.Context, name string) ([]City, 
 	}
 
 	cities, err = s.Client.FetchGeocoding(ctx, name, 1)
+	log.Printf("api queried")
 	if err != nil || len(cities) == 0 {
 		log.Printf("city '%s' not found locally or via API", name)
 		return nil, fmt.Errorf("city '%s' not found locally or via API", name)

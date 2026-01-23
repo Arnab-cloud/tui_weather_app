@@ -8,15 +8,16 @@ type itemsKeyMap struct {
 	choose       key.Binding
 	toggleFilter key.Binding
 	quitApp      key.Binding
+	escInput     key.Binding
 }
 
 func (dKeyMp itemsKeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{dKeyMp.choose, dKeyMp.toggleFilter, dKeyMp.quitApp}
+	return []key.Binding{dKeyMp.escInput, dKeyMp.choose, dKeyMp.toggleFilter, dKeyMp.quitApp}
 }
 
 func (dKeyMp itemsKeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
-		{dKeyMp.choose, dKeyMp.toggleFilter, dKeyMp.quitApp},
+		{dKeyMp.choose, dKeyMp.toggleFilter, dKeyMp.quitApp, dKeyMp.escInput},
 	}
 }
 
@@ -33,6 +34,10 @@ func newItemsKeyMap() *itemsKeyMap {
 		quitApp: key.NewBinding(
 			key.WithKeys("q", "ctrl+c"),
 			key.WithHelp("q", "close app"),
+		),
+		escInput: key.NewBinding(
+			key.WithKeys("esc"),
+			key.WithHelp("esc", "esc from input"),
 		),
 	}
 }
