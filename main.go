@@ -17,14 +17,16 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 const DebounceDuration = 500 * time.Millisecond
 
-var titleStyle = lipgloss.NewStyle().
-	Bold(true).
-	Foreground(lipgloss.Color("62")).
-	MarginBottom(1)
+// var titleStyle = lipgloss.NewStyle().
+// 	Bold(true).
+// 	Foreground(lipgloss.Color("62")).
+// 	MarginBottom(1)
 
 var helpStyle = lipgloss.NewStyle().
 	Foreground(lipgloss.Color("241")).
@@ -208,6 +210,10 @@ func (curM StateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (curM StateModel) View() string {
 
+	if curM.err != nil {
+		return errorStyle.Render(fmt.Sprintf("❌ Error: %v", curM.err))
+	}
+
 	if curM.isFilterOpen {
 		var s strings.Builder
 		s.WriteString(titleStyle.Render("🌤️  Weather Search"))
@@ -226,7 +232,7 @@ func (curM StateModel) View() string {
 	}
 
 	if curM.curItem != nil && curM.curWeather != nil {
-		return fmt.Sprintf("weather: %v", *curM.curWeather)
+		return renderWeather(curM.curWeather)
 	}
 
 	return "Nothing to show here"
@@ -286,4 +292,93 @@ func initModel() StateModel {
 	newModel.searchResults.SetFilteringEnabled(false)
 
 	return newModel
+}
+
+func renderWeather(weather *WeatherResponse) string {
+	var b strings.Builder
+	caser := cases.Title(language.English)
+
+	// Header with city name and country
+	header := fmt.Sprintf("📍 %s, %s", weather.Name, weather.Sys.Country)
+	b.WriteString(cityStyle.Render(header))
+	b.WriteString("\n\n")
+
+	// Main temperature display
+	temp := fmt.Sprintf("%.1f°C", weather.Main.Temp)
+	b.WriteString(tempStyle.Render(temp))
+	b.WriteString("\n")
+
+	// Weather description with icon
+	if len(weather.Weather) > 0 {
+		weatherDesc := getWeatherEmoji(weather.Weather[0].Icon) + " " +
+			caser.String(weather.Weather[0].Desc)
+		b.WriteString(descStyle.Render(weatherDesc))
+		b.WriteString("\n\n")
+	}
+
+	// Feels like temperature
+	feelsLike := fmt.Sprintf("%s%s",
+		labelStyle.Render("Feels like:"),
+		valueStyle.Render(fmt.Sprintf("%.1f°C", weather.Main.FeelsLike)))
+	b.WriteString(feelsLike)
+	b.WriteString("\n")
+
+	// Temperature range
+	tempRange := fmt.Sprintf("%s%s",
+		labelStyle.Render("Range:"),
+		valueStyle.Render(fmt.Sprintf("%.1f°C - %.1f°C",
+			weather.Main.TempMin, weather.Main.TempMax)))
+	b.WriteString(tempRange)
+	b.WriteString("\n\n")
+
+	// Weather details box
+	var details strings.Builder
+
+	details.WriteString(formatDetail("💧 Humidity", fmt.Sprintf("%d%%", weather.Main.Humidity)))
+	details.WriteString(formatDetail("🌬  Wind Speed", fmt.Sprintf("%.1f m/s", weather.Wind.Speed)))
+	details.WriteString(formatDetail("🧭 Wind Direction", getWindDirection(weather.Wind.Deg)))
+	details.WriteString(formatDetail("🔽 Pressure", fmt.Sprintf("%d hPa", weather.Main.Pressure)))
+	details.WriteString(formatDetail("👁  Visibility", fmt.Sprintf("%d m", weather.Vis)))
+	if weather.Clouds > 0 {
+		details.WriteString(formatDetail("☁️  Clouds", fmt.Sprintf("%d%%", weather.Clouds)))
+	}
+
+	b.WriteString(boxStyle.Render(details.String()))
+	b.WriteString("\n")
+
+	// Sun times
+	sunrise := time.Unix(weather.Sys.Sunrise, 0).Format("15:04")
+	sunset := time.Unix(weather.Sys.Sunset, 0).Format("15:04")
+
+	sunInfo := fmt.Sprintf("🌅 Sunrise: %s  |  🌇 Sunset: %s",
+		valueStyle.Render(sunrise),
+		valueStyle.Render(sunset))
+	b.WriteString(sunInfo)
+	b.WriteString("\n\n")
+
+	// Footer
+	footer := mutedColorStyle.Render("Press 'q' to quit | Press 's' to search new city")
+	b.WriteString(footer)
+
+	return b.String()
+}
+
+func getWeatherEmoji(icon string) string {
+	if emoji, ok := emojiMap[icon]; ok {
+		return emoji
+	}
+	return "🌤️"
+}
+
+func formatDetail(label, value string) string {
+	return fmt.Sprintf("%s%s\n",
+		labelStyle.Render(label+":"),
+		valueStyle.Render(value))
+}
+
+func getWindDirection(deg int) string {
+	directions := []string{"N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+		"S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"}
+	index := int((float64(deg) + 11.25) / 22.5)
+	return directions[index%16] + fmt.Sprintf(" (%d°)", deg)
 }

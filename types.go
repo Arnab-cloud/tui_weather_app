@@ -46,6 +46,7 @@ type WeatherSys struct {
 type WeatherResponse struct {
 	Weather  []BasicWeather `json:"weather"`
 	Main     MainWeather    `json:"main"`
+	Sys      WeatherSys     `json:"sys"`
 	Wind     Wind           `json:"wind"`
 	Coord    Coordinates    `json:"coord"`
 	Rain     float64        `json:"rain.1h"`
