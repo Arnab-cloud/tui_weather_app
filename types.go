@@ -123,60 +123,62 @@ func WeatherCacheToResponse(w database.WeatherCache) WeatherResponse {
 
 func (res *WeatherResponse) ToDBWeather() database.InsertWeatherParams {
 	now := time.Now().Unix()
-
 	var (
 		weatherMain sql.NullString
 		weatherDesc sql.NullString
 		weatherIcon sql.NullString
+		weatherID   sql.NullInt64
 	)
-
 	// Weather array is usually non-empty, but be safe
 	if len(res.Weather) > 0 {
 		weatherMain = sql.NullString{String: res.Weather[0].Type, Valid: true}
 		weatherDesc = sql.NullString{String: res.Weather[0].Desc, Valid: true}
 		weatherIcon = sql.NullString{String: res.Weather[0].Icon, Valid: true}
+		weatherID = sql.NullInt64{Int64: int64(res.Weather[0].Id), Valid: true}
 	}
-
 	// Rain is optional in OpenWeatherMap
 	var rain1h sql.NullFloat64
 	if res.Rain > 0 {
 		rain1h = sql.NullFloat64{Float64: float64(res.Rain), Valid: true}
 	}
 
+	// Country is optional
+	var country sql.NullString
+	if res.Sys.Country != "" {
+		country = sql.NullString{String: res.Sys.Country, Valid: true}
+	}
+
 	return database.InsertWeatherParams{
-		CityID:   sql.NullInt64{Int64: int64(res.ID), Valid: true},
-		CityName: sql.NullString{String: res.Name, Valid: res.Name != ""},
-
-		Lat: sql.NullFloat64{Float64: res.Coord.Lat, Valid: true},
-		Lon: sql.NullFloat64{Float64: res.Coord.Lon, Valid: true},
-
+		CityID:      sql.NullInt64{Int64: int64(res.ID), Valid: true},
+		CityName:    sql.NullString{String: res.Name, Valid: res.Name != ""},
+		Country:     country,
+		Lat:         sql.NullFloat64{Float64: res.Coord.Lat, Valid: true},
+		Lon:         sql.NullFloat64{Float64: res.Coord.Lon, Valid: true},
 		WeatherMain: weatherMain,
 		WeatherDesc: weatherDesc,
 		WeatherIcon: weatherIcon,
-
-		Temp:      sql.NullFloat64{Float64: float64(res.Main.Temp), Valid: true},
-		FeelsLike: sql.NullFloat64{Float64: float64(res.Main.FeelsLike), Valid: true},
-		TempMin:   sql.NullFloat64{Float64: float64(res.Main.TempMin), Valid: true},
-		TempMax:   sql.NullFloat64{Float64: float64(res.Main.TempMax), Valid: true},
-
-		Humidity: sql.NullInt64{Int64: int64(res.Main.Humidity), Valid: true},
-		Pressure: sql.NullInt64{Int64: int64(res.Main.Pressure), Valid: true},
-
-		WindSpeed: sql.NullFloat64{Float64: float64(res.Wind.Speed), Valid: true},
-		WindDeg:   sql.NullInt64{Int64: int64(res.Wind.Deg), Valid: true},
-		WindGust:  sql.NullFloat64{Float64: float64(res.Wind.Gust), Valid: res.Wind.Gust > 0},
-
-		Rain1h: rain1h,
-
-		Cloudiness: sql.NullInt64{Int64: int64(res.Clouds), Valid: true},
-		Visibility: sql.NullInt64{Int64: int64(res.Vis), Valid: true},
-
+		WeatherID:   weatherID,
+		Temp:        sql.NullFloat64{Float64: float64(res.Main.Temp), Valid: true},
+		FeelsLike:   sql.NullFloat64{Float64: float64(res.Main.FeelsLike), Valid: true},
+		TempMin:     sql.NullFloat64{Float64: float64(res.Main.TempMin), Valid: true},
+		TempMax:     sql.NullFloat64{Float64: float64(res.Main.TempMax), Valid: true},
+		Humidity:    sql.NullInt64{Int64: int64(res.Main.Humidity), Valid: true},
+		Pressure:    sql.NullInt64{Int64: int64(res.Main.Pressure), Valid: true},
+		SeaLevel:    sql.NullInt64{Int64: int64(res.Main.SeaLevel), Valid: res.Main.SeaLevel > 0},
+		GroundLevel: sql.NullInt64{Int64: int64(res.Main.GroundLevel), Valid: res.Main.GroundLevel > 0},
+		WindSpeed:   sql.NullFloat64{Float64: float64(res.Wind.Speed), Valid: true},
+		WindDeg:     sql.NullInt64{Int64: int64(res.Wind.Deg), Valid: true},
+		WindGust:    sql.NullFloat64{Float64: float64(res.Wind.Gust), Valid: res.Wind.Gust > 0},
+		Rain1h:      rain1h,
+		Cloudiness:  sql.NullInt64{Int64: int64(res.Clouds), Valid: true},
+		Visibility:  sql.NullInt64{Int64: int64(res.Vis), Valid: true},
+		Sunrise:     sql.NullInt64{Int64: res.Sys.Sunrise, Valid: res.Sys.Sunrise > 0},
+		Sunset:      sql.NullInt64{Int64: res.Sys.Sunset, Valid: res.Sys.Sunset > 0},
 		WeatherTime: sql.NullInt64{Int64: res.DT, Valid: true},
 		FetchedAt:   sql.NullInt64{Int64: now, Valid: true},
 		Timezone:    sql.NullInt64{Int64: int64(res.Timezone), Valid: true},
 	}
 }
-
 func nullString(ns sql.NullString) string {
 	if ns.Valid {
 		return ns.String

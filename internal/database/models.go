@@ -43,4 +43,9 @@ type WeatherCache struct {
 	WeatherTime sql.NullInt64
 	FetchedAt   sql.NullInt64
 	Timezone    sql.NullInt64
+	WeatherID   sql.NullInt64
+	SeaLevel    sql.NullInt64
+	GroundLevel sql.NullInt64
+	Sunrise     sql.NullInt64
+	Sunset      sql.NullInt64
 }

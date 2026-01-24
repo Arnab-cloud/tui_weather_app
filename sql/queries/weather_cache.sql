@@ -54,23 +54,28 @@ INSERT INTO weather_cache (
     weather_main,
     weather_desc,
     weather_icon,
+    weather_id,
     temp,
     feels_like,
     temp_min,
     temp_max,
     humidity,
     pressure,
+    sea_level,
+    ground_level,
     wind_speed,
     wind_deg,
     wind_gust,
     rain_1h,
     cloudiness,
     visibility,
+    sunrise,
+    sunset,
     weather_time,
     fetched_at,
     timezone
 ) VALUES (
-    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 );
 
 

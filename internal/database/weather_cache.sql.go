@@ -35,7 +35,7 @@ func (q *Queries) DeleteOldWeather(ctx context.Context, fetchedAt sql.NullInt64)
 }
 
 const getFreshWeatherByCity = `-- name: GetFreshWeatherByCity :one
-SELECT id, city_id, city_name, country, lat, lon, weather_main, weather_desc, weather_icon, "temp", feels_like, temp_min, temp_max, humidity, pressure, wind_speed, wind_deg, wind_gust, rain_1h, cloudiness, visibility, weather_time, fetched_at, timezone
+SELECT id, city_id, city_name, country, lat, lon, weather_main, weather_desc, weather_icon, "temp", feels_like, temp_min, temp_max, humidity, pressure, wind_speed, wind_deg, wind_gust, rain_1h, cloudiness, visibility, weather_time, fetched_at, timezone, weather_id, sea_level, ground_level, sunrise, sunset
 FROM weather_cache
 WHERE city_name = ?
   AND fetched_at >= ?
@@ -76,12 +76,17 @@ func (q *Queries) GetFreshWeatherByCity(ctx context.Context, arg GetFreshWeather
 		&i.WeatherTime,
 		&i.FetchedAt,
 		&i.Timezone,
+		&i.WeatherID,
+		&i.SeaLevel,
+		&i.GroundLevel,
+		&i.Sunrise,
+		&i.Sunset,
 	)
 	return i, err
 }
 
 const getFreshWeatherByCoords = `-- name: GetFreshWeatherByCoords :one
-SELECT id, city_id, city_name, country, lat, lon, weather_main, weather_desc, weather_icon, "temp", feels_like, temp_min, temp_max, humidity, pressure, wind_speed, wind_deg, wind_gust, rain_1h, cloudiness, visibility, weather_time, fetched_at, timezone
+SELECT id, city_id, city_name, country, lat, lon, weather_main, weather_desc, weather_icon, "temp", feels_like, temp_min, temp_max, humidity, pressure, wind_speed, wind_deg, wind_gust, rain_1h, cloudiness, visibility, weather_time, fetched_at, timezone, weather_id, sea_level, ground_level, sunrise, sunset
 FROM weather_cache
 WHERE lat >= ?
   AND lat <= ?
@@ -134,12 +139,17 @@ func (q *Queries) GetFreshWeatherByCoords(ctx context.Context, arg GetFreshWeath
 		&i.WeatherTime,
 		&i.FetchedAt,
 		&i.Timezone,
+		&i.WeatherID,
+		&i.SeaLevel,
+		&i.GroundLevel,
+		&i.Sunrise,
+		&i.Sunset,
 	)
 	return i, err
 }
 
 const getLatestWeatherByCity = `-- name: GetLatestWeatherByCity :one
-SELECT id, city_id, city_name, country, lat, lon, weather_main, weather_desc, weather_icon, "temp", feels_like, temp_min, temp_max, humidity, pressure, wind_speed, wind_deg, wind_gust, rain_1h, cloudiness, visibility, weather_time, fetched_at, timezone
+SELECT id, city_id, city_name, country, lat, lon, weather_main, weather_desc, weather_icon, "temp", feels_like, temp_min, temp_max, humidity, pressure, wind_speed, wind_deg, wind_gust, rain_1h, cloudiness, visibility, weather_time, fetched_at, timezone, weather_id, sea_level, ground_level, sunrise, sunset
 FROM weather_cache
 WHERE city_name = ?
 ORDER BY fetched_at DESC
@@ -174,12 +184,17 @@ func (q *Queries) GetLatestWeatherByCity(ctx context.Context, cityName sql.NullS
 		&i.WeatherTime,
 		&i.FetchedAt,
 		&i.Timezone,
+		&i.WeatherID,
+		&i.SeaLevel,
+		&i.GroundLevel,
+		&i.Sunrise,
+		&i.Sunset,
 	)
 	return i, err
 }
 
 const getLatestWeatherByCityID = `-- name: GetLatestWeatherByCityID :one
-SELECT id, city_id, city_name, country, lat, lon, weather_main, weather_desc, weather_icon, "temp", feels_like, temp_min, temp_max, humidity, pressure, wind_speed, wind_deg, wind_gust, rain_1h, cloudiness, visibility, weather_time, fetched_at, timezone
+SELECT id, city_id, city_name, country, lat, lon, weather_main, weather_desc, weather_icon, "temp", feels_like, temp_min, temp_max, humidity, pressure, wind_speed, wind_deg, wind_gust, rain_1h, cloudiness, visibility, weather_time, fetched_at, timezone, weather_id, sea_level, ground_level, sunrise, sunset
 FROM weather_cache
 WHERE city_id = ?
 ORDER BY fetched_at DESC
@@ -214,12 +229,17 @@ func (q *Queries) GetLatestWeatherByCityID(ctx context.Context, cityID sql.NullI
 		&i.WeatherTime,
 		&i.FetchedAt,
 		&i.Timezone,
+		&i.WeatherID,
+		&i.SeaLevel,
+		&i.GroundLevel,
+		&i.Sunrise,
+		&i.Sunset,
 	)
 	return i, err
 }
 
 const getLatestWeatherByCoords = `-- name: GetLatestWeatherByCoords :one
-SELECT id, city_id, city_name, country, lat, lon, weather_main, weather_desc, weather_icon, "temp", feels_like, temp_min, temp_max, humidity, pressure, wind_speed, wind_deg, wind_gust, rain_1h, cloudiness, visibility, weather_time, fetched_at, timezone
+SELECT id, city_id, city_name, country, lat, lon, weather_main, weather_desc, weather_icon, "temp", feels_like, temp_min, temp_max, humidity, pressure, wind_speed, wind_deg, wind_gust, rain_1h, cloudiness, visibility, weather_time, fetched_at, timezone, weather_id, sea_level, ground_level, sunrise, sunset
 FROM weather_cache
 WHERE lat >= ?
   AND lat <= ?
@@ -272,12 +292,17 @@ func (q *Queries) GetLatestWeatherByCoords(ctx context.Context, arg GetLatestWea
 		&i.WeatherTime,
 		&i.FetchedAt,
 		&i.Timezone,
+		&i.WeatherID,
+		&i.SeaLevel,
+		&i.GroundLevel,
+		&i.Sunrise,
+		&i.Sunset,
 	)
 	return i, err
 }
 
 const getWeatherHistoryByCity = `-- name: GetWeatherHistoryByCity :many
-SELECT id, city_id, city_name, country, lat, lon, weather_main, weather_desc, weather_icon, "temp", feels_like, temp_min, temp_max, humidity, pressure, wind_speed, wind_deg, wind_gust, rain_1h, cloudiness, visibility, weather_time, fetched_at, timezone
+SELECT id, city_id, city_name, country, lat, lon, weather_main, weather_desc, weather_icon, "temp", feels_like, temp_min, temp_max, humidity, pressure, wind_speed, wind_deg, wind_gust, rain_1h, cloudiness, visibility, weather_time, fetched_at, timezone, weather_id, sea_level, ground_level, sunrise, sunset
 FROM weather_cache
 WHERE city_name = ?
 ORDER BY fetched_at DESC
@@ -323,6 +348,11 @@ func (q *Queries) GetWeatherHistoryByCity(ctx context.Context, arg GetWeatherHis
 			&i.WeatherTime,
 			&i.FetchedAt,
 			&i.Timezone,
+			&i.WeatherID,
+			&i.SeaLevel,
+			&i.GroundLevel,
+			&i.Sunrise,
+			&i.Sunset,
 		); err != nil {
 			return nil, err
 		}
@@ -347,23 +377,28 @@ INSERT INTO weather_cache (
     weather_main,
     weather_desc,
     weather_icon,
+    weather_id,
     temp,
     feels_like,
     temp_min,
     temp_max,
     humidity,
     pressure,
+    sea_level,
+    ground_level,
     wind_speed,
     wind_deg,
     wind_gust,
     rain_1h,
     cloudiness,
     visibility,
+    sunrise,
+    sunset,
     weather_time,
     fetched_at,
     timezone
 ) VALUES (
-    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 )
 `
 
@@ -376,18 +411,23 @@ type InsertWeatherParams struct {
 	WeatherMain sql.NullString
 	WeatherDesc sql.NullString
 	WeatherIcon sql.NullString
+	WeatherID   sql.NullInt64
 	Temp        sql.NullFloat64
 	FeelsLike   sql.NullFloat64
 	TempMin     sql.NullFloat64
 	TempMax     sql.NullFloat64
 	Humidity    sql.NullInt64
 	Pressure    sql.NullInt64
+	SeaLevel    sql.NullInt64
+	GroundLevel sql.NullInt64
 	WindSpeed   sql.NullFloat64
 	WindDeg     sql.NullInt64
 	WindGust    sql.NullFloat64
 	Rain1h      sql.NullFloat64
 	Cloudiness  sql.NullInt64
 	Visibility  sql.NullInt64
+	Sunrise     sql.NullInt64
+	Sunset      sql.NullInt64
 	WeatherTime sql.NullInt64
 	FetchedAt   sql.NullInt64
 	Timezone    sql.NullInt64
@@ -403,18 +443,23 @@ func (q *Queries) InsertWeather(ctx context.Context, arg InsertWeatherParams) er
 		arg.WeatherMain,
 		arg.WeatherDesc,
 		arg.WeatherIcon,
+		arg.WeatherID,
 		arg.Temp,
 		arg.FeelsLike,
 		arg.TempMin,
 		arg.TempMax,
 		arg.Humidity,
 		arg.Pressure,
+		arg.SeaLevel,
+		arg.GroundLevel,
 		arg.WindSpeed,
 		arg.WindDeg,
 		arg.WindGust,
 		arg.Rain1h,
 		arg.Cloudiness,
 		arg.Visibility,
+		arg.Sunrise,
+		arg.Sunset,
 		arg.WeatherTime,
 		arg.FetchedAt,
 		arg.Timezone,
