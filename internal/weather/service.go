@@ -1,4 +1,4 @@
-package main
+package weather
 
 import (
 	"context"
@@ -27,7 +27,7 @@ func NewWeatherService(conn *sql.DB, client *WeatherClient) *WeatherService {
 }
 
 func (s *WeatherService) GetWeather(ctx context.Context, loc Location) (*WeatherResponse, error) {
-	var weather *WeatherResponse
+	var w *WeatherResponse
 	if loc.Coord.Lat == 0 && loc.Coord.Lon == 0 {
 		cities, err := s.ResolveCity(ctx, loc.Name)
 		if err != nil {
@@ -49,18 +49,18 @@ func (s *WeatherService) GetWeather(ctx context.Context, loc Location) (*Weather
 		return &cachedWeatherRes, nil
 	}
 
-	weather, err := s.Client.FetchWeather(ctx, loc.Coord.Lat, loc.Coord.Lon)
+	w, err := s.Client.FetchWeather(ctx, loc.Coord.Lat, loc.Coord.Lon)
 	if err != nil {
 		return nil, err
 	}
 
 	func() {
-		if err := s.DB.InsertWeather(ctx, weather.ToDBWeather()); err != nil {
+		if err := s.DB.InsertWeather(ctx, w.ToDBWeather()); err != nil {
 			log.Printf("Failed to cache the response: %s", err)
 		}
 	}()
 
-	return weather, nil
+	return w, nil
 }
 
 func (s *WeatherService) ResolveCity(ctx context.Context, name string) ([]City, error) {

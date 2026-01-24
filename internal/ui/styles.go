@@ -1,4 +1,4 @@
-package main
+package ui
 
 import (
 	"github.com/charmbracelet/lipgloss"
@@ -42,6 +42,10 @@ var (
 			Padding(1, 2).
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(errorColor)
+
+	helpStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("241")).
+			MarginTop(1)
 )
 
 var emojiMap = map[string]string{
@@ -65,60 +69,9 @@ var emojiMap = map[string]string{
 	"50n": "🌫️",
 }
 
-// A "Card" to hold the content
-// cardStyle = lipgloss.NewStyle().
-// Border(lipgloss.RoundedBorder()).
-// BorderForeground(primaryColor).
-// Padding(1, 4).
-// Width(60)
-
-// Large Temperature Display
-// bigTempStyle = lipgloss.NewStyle().
-// Foreground(accentColor).
-// Bold(true).
-// Padding(0, 1).
-// MarginRight(4).
-// SetString("") // Placeholder
-
-// Sidebar/Details column
-// columnStyle = lipgloss.NewStyle().
-// 		Width(25)
-
-// Use Padding and Width to create structural "size"
-// heroColumn = lipgloss.NewStyle().
-// 		Padding(1, 2).
-// 		Border(lipgloss.NormalBorder(), false, true, false, false). // Right border only
-// 		BorderForeground(mutedColor)
-
-// Info rows
-// infoLabel = lipgloss.NewStyle().Foreground(mutedColor)
-// infoValue = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF")).Bold(true)
-
-// cityStyle = lipgloss.NewStyle().
-// 		Foreground(secondaryColor).
-// 		Bold(true)
-
-// tempStyle = lipgloss.NewStyle().
-// Foreground(accentColor).
-// Bold(true)
-
-// labelStyle = lipgloss.NewStyle().
-// Foreground(mutedColor).
-// Width(15)
-
-// valueStyle = lipgloss.NewStyle().
-// 		Foreground(lipgloss.Color("#ABB2BF")).
-// 		Bold(true)
-
-// boxStyle = lipgloss.NewStyle().
-// 		Border(lipgloss.RoundedBorder()).
-// 		BorderForeground(primaryColor).
-// 		Padding(1, 2).
-// 		MarginTop(1)
-
-// descStyle = lipgloss.NewStyle().
-// Foreground(lipgloss.Color("#C678DD")).
-// Italic(true)
-
-// mutedColorStyle = lipgloss.NewStyle().
-// 		Foreground(mutedCo
+func getWeatherEmoji(icon string) string {
+	if emoji, ok := emojiMap[icon]; ok {
+		return emoji
+	}
+	return "🌤️"
+}

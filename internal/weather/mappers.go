@@ -1,125 +1,10 @@
-package main
+package weather
 
 import (
 	"database/sql"
 	"github/Arnab-cloud/tui_weather_app/internal/database"
 	"time"
 )
-
-type Coordinates struct {
-	Lat float64 `json:"lat"`
-	Lon float64 `json:"lon"`
-}
-
-type BasicWeather struct {
-	Type string `json:"main"`
-	Desc string `json:"description"`
-	Icon string `json:"icon"`
-	Id   int    `json:"id"`
-}
-
-type MainWeather struct {
-	Temp        float64 `json:"temp"`
-	FeelsLike   float64 `json:"feels_like"`
-	TempMin     float64 `json:"temp_min"`
-	TempMax     float64 `json:"temp_max"`
-	Pressure    int     `json:"pressure"`
-	Humidity    int     `json:"humidity"`
-	SeaLevel    int     `json:"sea_level"`
-	GroundLevel int     `json:"grnd_level"`
-}
-
-type Wind struct {
-	Speed float64 `json:"speed"`
-	Gust  float64 `json:"gust"`
-	Deg   int     `json:"deg"`
-}
-
-type WeatherSys struct {
-	Country string `json:"country"`
-	Sunrise int64  `json:"sunrise"`
-	Sunset  int64  `json:"sunset"`
-	Type    int    `json:"type"`
-	Id      int    `json:"id"`
-}
-
-type WeatherResponse struct {
-	Weather  []BasicWeather `json:"weather"`
-	Main     MainWeather    `json:"main"`
-	Sys      WeatherSys     `json:"sys"`
-	Wind     Wind           `json:"wind"`
-	Coord    Coordinates    `json:"coord"`
-	Rain     float64        `json:"rain.1h"`
-	Base     string         `json:"base"`
-	Name     string         `json:"name"`
-	DT       int64          `json:"dt"`
-	COD      int            `json:"cod"`
-	ID       int            `json:"id"`
-	Clouds   int            `json:"clouds.all"`
-	Timezone int            `json:"timezone"`
-	Vis      int            `json:"visibility"`
-}
-
-type City struct {
-	Name    string  `json:"name"`
-	Country string  `json:"country"`
-	Lat     float64 `json:"lat"`
-	Lon     float64 `json:"lon"`
-	Id      int     `json:"id"`
-}
-
-type Location struct {
-	Name  string      `json:"name"`
-	Coord Coordinates `json:"coord"`
-	Id    int         `json:"id"`
-}
-
-func WeatherCacheToResponse(w database.WeatherCache) WeatherResponse {
-	return WeatherResponse{
-		ID:   int(w.ID),
-		Name: nullString(w.CityName),
-		DT:   nullInt64(w.WeatherTime),
-		COD:  200, // cached result is assumed OK
-		Base: "stations",
-
-		Timezone: nullInt(w.Timezone),
-		Vis:      nullInt(w.Visibility),
-		Clouds:   nullInt(w.Cloudiness),
-
-		Coord: Coordinates{
-			Lat: nullFloat64(w.Lat),
-			Lon: nullFloat64(w.Lon),
-		},
-
-		Weather: []BasicWeather{
-			{
-				Type: nullString(w.WeatherMain),
-				Desc: nullString(w.WeatherDesc),
-				Icon: nullString(w.WeatherIcon),
-				Id:   0, // not present in cache
-			},
-		},
-
-		Main: MainWeather{
-			Temp:        nullFloat64(w.Temp),
-			FeelsLike:   nullFloat64(w.FeelsLike),
-			TempMin:     nullFloat64(w.TempMin),
-			TempMax:     nullFloat64(w.TempMax),
-			Pressure:    nullInt(w.Pressure),
-			Humidity:    nullInt(w.Humidity),
-			SeaLevel:    0, // not stored
-			GroundLevel: 0, // not stored
-		},
-
-		Wind: Wind{
-			Speed: nullFloat64(w.WindSpeed),
-			Gust:  nullFloat64(w.WindGust),
-			Deg:   nullInt(w.WindDeg),
-		},
-
-		Rain: nullFloat64(w.Rain1h),
-	}
-}
 
 func (res *WeatherResponse) ToDBWeather() database.InsertWeatherParams {
 	now := time.Now().Unix()
@@ -179,6 +64,61 @@ func (res *WeatherResponse) ToDBWeather() database.InsertWeatherParams {
 		Timezone:    sql.NullInt64{Int64: int64(res.Timezone), Valid: true},
 	}
 }
+
+func WeatherCacheToResponse(w database.WeatherCache) WeatherResponse {
+	return WeatherResponse{
+		ID:   int(w.ID),
+		Name: nullString(w.CityName),
+		DT:   nullInt64(w.WeatherTime),
+		COD:  200, // cached result is assumed OK
+		Base: "stations",
+
+		Timezone: nullInt(w.Timezone),
+		Vis:      nullInt(w.Visibility),
+		Clouds:   nullInt(w.Cloudiness),
+
+		Coord: Coordinates{
+			Lat: nullFloat64(w.Lat),
+			Lon: nullFloat64(w.Lon),
+		},
+
+		Sys: WeatherSys{
+			Country: nullString(w.Country),
+			Sunrise: nullInt64(w.Sunrise),
+			Sunset:  nullInt64(w.Sunset),
+			Id:      int(w.ID),
+		},
+
+		Weather: []BasicWeather{
+			{
+				Type: nullString(w.WeatherMain),
+				Desc: nullString(w.WeatherDesc),
+				Icon: nullString(w.WeatherIcon),
+				Id:   nullInt(w.WeatherID),
+			},
+		},
+
+		Main: MainWeather{
+			Temp:        nullFloat64(w.Temp),
+			FeelsLike:   nullFloat64(w.FeelsLike),
+			TempMin:     nullFloat64(w.TempMin),
+			TempMax:     nullFloat64(w.TempMax),
+			Pressure:    nullInt(w.Pressure),
+			Humidity:    nullInt(w.Humidity),
+			SeaLevel:    nullInt(w.SeaLevel),
+			GroundLevel: nullInt(w.GroundLevel),
+		},
+
+		Wind: Wind{
+			Speed: nullFloat64(w.WindSpeed),
+			Gust:  nullFloat64(w.WindGust),
+			Deg:   nullInt(w.WindDeg),
+		},
+
+		Rain: nullFloat64(w.Rain1h),
+	}
+}
+
 func nullString(ns sql.NullString) string {
 	if ns.Valid {
 		return ns.String
