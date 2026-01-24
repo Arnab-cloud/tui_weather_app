@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/help"
@@ -15,10 +14,9 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/common-nighthawk/go-figure"
 	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
 const DebounceDuration = 500 * time.Millisecond
@@ -73,6 +71,8 @@ type StateModel struct {
 	help              help.Model
 	err               error
 	debounceId        int
+	width             int
+	height            int
 }
 
 func (curM *StateModel) debouncedSearch() tea.Cmd {
@@ -131,6 +131,7 @@ func (curM StateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
 	case tea.WindowSizeMsg:
+		curM.width, curM.height = msg.Width, msg.Height
 		curM.searchResults.SetSize(msg.Width-4, msg.Height-8)
 
 	case citySearchResultMsg:
@@ -211,31 +212,33 @@ func (curM StateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (curM StateModel) View() string {
 
 	if curM.err != nil {
-		return errorStyle.Render(fmt.Sprintf("❌ Error: %v", curM.err))
+		return windowStyle.
+			Width(curM.width).
+			Height(curM.height).
+			Render(errorStyle.Render(fmt.Sprintf("❌ Error: %v", curM.err)))
 	}
 
 	if curM.isFilterOpen {
-		var s strings.Builder
-		s.WriteString(titleStyle.Render("🌤️  Weather Search"))
-		s.WriteString("\n\n")
-		s.WriteString(curM.textInput.View())
-		s.WriteString("\n\n")
-		s.WriteString(curM.searchResults.View())
-		s.WriteString("\n")
-
-		return s.String()
-	}
-
-	if curM.curItem != nil && curM.isFetchingWeather {
-		return fmt.Sprintf("Selected: %s, %s\nFetching weather...\n",
-			curM.curItem.Title(), curM.curItem.Description())
+		searchContent := lipgloss.JoinVertical(lipgloss.Left,
+			titleStyle.Render("🌤️ Weather Search"),
+			curM.textInput.View(),
+			"",
+			curM.searchResults.View(),
+		)
+		return windowStyle.
+			Width(curM.width).
+			Height(curM.height).
+			Render(searchContent)
 	}
 
 	if curM.curItem != nil && curM.curWeather != nil {
-		return renderWeather(curM.curWeather)
+		return renderWeather(curM.curWeather, curM.width, curM.height)
 	}
 
-	return "Nothing to show here"
+	return windowStyle.
+		Width(curM.width).
+		Height(curM.height).
+		Render("Loading...")
 
 }
 
@@ -294,73 +297,134 @@ func initModel() StateModel {
 	return newModel
 }
 
-func renderWeather(weather *WeatherResponse) string {
-	var b strings.Builder
-	caser := cases.Title(language.English)
+func renderWeather(weather *WeatherResponse, width, height int) string {
+	// Hero section with location and temperature
+	fig := figure.NewColorFigure(fmt.Sprintf("%.1f", weather.Main.Temp), "slant", "yellow", true)
+	bigTemp := fig.String()
 
-	// Header with city name and country
-	header := fmt.Sprintf("📍 %s, %s", weather.Name, weather.Sys.Country)
-	b.WriteString(cityStyle.Render(header))
-	b.WriteString("\n\n")
+	locationStyle := lipgloss.NewStyle().Foreground(white).Bold(true)
+	location := locationStyle.Render(fmt.Sprintf("📍 %s, %s", weather.Name, weather.Sys.Country))
 
-	// Main temperature display
-	temp := fmt.Sprintf("%.1f°C", weather.Main.Temp)
-	b.WriteString(tempStyle.Render(temp))
-	b.WriteString("\n")
+	weatherDesc := lipgloss.JoinHorizontal(lipgloss.Center,
+		getWeatherEmoji(weather.Weather[0].Icon),
+		lipgloss.NewStyle().MarginLeft(2).Foreground(fg).Render(weather.Weather[0].Desc),
+	)
 
-	// Weather description with icon
-	if len(weather.Weather) > 0 {
-		weatherDesc := getWeatherEmoji(weather.Weather[0].Icon) + " " +
-			caser.String(weather.Weather[0].Desc)
-		b.WriteString(descStyle.Render(weatherDesc))
-		b.WriteString("\n\n")
-	}
+	heroLeft := lipgloss.JoinVertical(lipgloss.Left,
+		location,
+		weatherDesc,
+		"",
+		formatHiLo(weather.Main.TempMax, weather.Main.TempMin),
+	)
 
-	// Feels like temperature
-	feelsLike := fmt.Sprintf("%s%s",
-		labelStyle.Render("Feels like:"),
-		valueStyle.Render(fmt.Sprintf("%.1f°C", weather.Main.FeelsLike)))
-	b.WriteString(feelsLike)
-	b.WriteString("\n")
+	hero := renderSection("",
+		lipgloss.JoinHorizontal(lipgloss.Center,
+			heroLeft,
+			lipgloss.NewStyle().Width(10).Render(""),
+			lipgloss.NewStyle().Foreground(yellow).Render(bigTemp),
+		),
+		width-10,
+		yellow,
+	)
 
-	// Temperature range
-	tempRange := fmt.Sprintf("%s%s",
-		labelStyle.Render("Range:"),
-		valueStyle.Render(fmt.Sprintf("%.1f°C - %.1f°C",
-			weather.Main.TempMin, weather.Main.TempMax)))
-	b.WriteString(tempRange)
-	b.WriteString("\n\n")
+	// Atmosphere grid
+	colWidth := (width / 3) - 6
+	atmRow1 := lipgloss.JoinHorizontal(lipgloss.Top,
+		renderDataPoint("🌡️ Feels Like", fmt.Sprintf("%.1f°C", weather.Main.FeelsLike), colWidth),
+		renderDataPoint("💧 Humidity", fmt.Sprintf("%d%%", weather.Main.Humidity), colWidth),
+		renderDataPoint("🌬️ Wind", fmt.Sprintf("%.1f m/s", weather.Wind.Speed), colWidth),
+	)
 
-	// Weather details box
-	var details strings.Builder
+	atmRow2 := lipgloss.JoinHorizontal(lipgloss.Top,
+		renderDataPoint("⏲️ Pressure", fmt.Sprintf("%d hPa", weather.Main.Pressure), colWidth),
+		renderDataPoint("👁️ Visibility", fmt.Sprintf("%.1f km", float64(weather.Vis)/1000), colWidth),
+		renderDataPoint("☁️ Cloudiness", fmt.Sprintf("%d%%", weather.Clouds), colWidth),
+	)
 
-	details.WriteString(formatDetail("💧 Humidity", fmt.Sprintf("%d%%", weather.Main.Humidity)))
-	details.WriteString(formatDetail("🌬  Wind Speed", fmt.Sprintf("%.1f m/s", weather.Wind.Speed)))
-	details.WriteString(formatDetail("🧭 Wind Direction", getWindDirection(weather.Wind.Deg)))
-	details.WriteString(formatDetail("🔽 Pressure", fmt.Sprintf("%d hPa", weather.Main.Pressure)))
-	details.WriteString(formatDetail("👁  Visibility", fmt.Sprintf("%d m", weather.Vis)))
-	if weather.Clouds > 0 {
-		details.WriteString(formatDetail("☁️  Clouds", fmt.Sprintf("%d%%", weather.Clouds)))
-	}
-
-	b.WriteString(boxStyle.Render(details.String()))
-	b.WriteString("\n")
+	atmosphere := renderSection("Atmosphere",
+		lipgloss.JoinVertical(lipgloss.Left, atmRow1, atmRow2),
+		width-10,
+		cyan,
+	)
 
 	// Sun times
-	sunrise := time.Unix(weather.Sys.Sunrise, 0).Format("15:04")
-	sunset := time.Unix(weather.Sys.Sunset, 0).Format("15:04")
+	halfWidth := (width / 2) - 8
+	sunContent := lipgloss.JoinHorizontal(lipgloss.Top,
+		renderDataPoint("🌅 Sunrise", time.Unix(weather.Sys.Sunrise, 0).Format("03:04 PM"), halfWidth/2),
+		renderDataPoint("🌇 Sunset", time.Unix(weather.Sys.Sunset, 0).Format("03:04 PM"), halfWidth/2),
+	)
 
-	sunInfo := fmt.Sprintf("🌅 Sunrise: %s  |  🌇 Sunset: %s",
-		valueStyle.Render(sunrise),
-		valueStyle.Render(sunset))
-	b.WriteString(sunInfo)
-	b.WriteString("\n\n")
+	sunSection := renderSection("Sun Times", sunContent, width-10, blue)
 
 	// Footer
-	footer := mutedColorStyle.Render("Press 'q' to quit | Press 's' to search new city")
-	b.WriteString(footer)
+	footer := lipgloss.NewStyle().
+		Foreground(comment).
+		Render("Press 'q' to quit • 's' to search")
 
-	return b.String()
+	// Assemble full view
+	fullView := lipgloss.JoinVertical(lipgloss.Left,
+		hero,
+		"",
+		atmosphere,
+		"",
+		sunSection,
+		"",
+		footer,
+	)
+
+	return windowStyle.
+		Width(width).
+		Height(height).
+		Render(fullView)
+}
+
+func renderSection(title, content string, width int, color lipgloss.Color) string {
+	sectionTitle := lipgloss.NewStyle().
+		Foreground(color).
+		Bold(true).
+		Padding(0, 1).
+		Render(title)
+
+	border := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(borderColor).
+		Width(width).
+		Render(content)
+
+	if title == "" {
+		return border
+	}
+
+	// We render the title, then "move" it slightly down or just place it above
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
+		sectionTitle,
+		border,
+	)
+}
+
+func renderDataPoint(label, value string, width int) string {
+	l := lipgloss.NewStyle().Foreground(magenta).Render(label)
+	v := lipgloss.NewStyle().Foreground(green).Bold(true).Render(value)
+
+	return lipgloss.NewStyle().
+		Width(width).
+		Padding(1).
+		Render(lipgloss.JoinVertical(lipgloss.Left, l, v))
+}
+
+func formatHiLo(hi, lo float64) string {
+	high := lipgloss.JoinHorizontal(lipgloss.Left,
+		hiLoLabelStyle.Render("H:"),
+		hiLoValueStyle.Render(fmt.Sprintf("%.0f°", hi)),
+	)
+
+	low := lipgloss.JoinHorizontal(lipgloss.Left,
+		hiLoLabelStyle.Render("L:"),
+		hiLoValueStyle.Render(fmt.Sprintf("%.0f°", lo)),
+	)
+
+	return lipgloss.JoinHorizontal(lipgloss.Left, high, "  ", low)
 }
 
 func getWeatherEmoji(icon string) string {
@@ -368,17 +432,4 @@ func getWeatherEmoji(icon string) string {
 		return emoji
 	}
 	return "🌤️"
-}
-
-func formatDetail(label, value string) string {
-	return fmt.Sprintf("%s%s\n",
-		labelStyle.Render(label+":"),
-		valueStyle.Render(value))
-}
-
-func getWindDirection(deg int) string {
-	directions := []string{"N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
-		"S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"}
-	index := int((float64(deg) + 11.25) / 22.5)
-	return directions[index%16] + fmt.Sprintf(" (%d°)", deg)
 }
