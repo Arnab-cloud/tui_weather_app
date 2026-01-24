@@ -7,34 +7,35 @@ import (
 )
 
 func (curM StateModel) View() string {
+	helpView := curM.help.View(curM.keys)
+	height := max(curM.height-lipgloss.Height(helpView), 0)
+
+	var content string
 
 	if curM.err != nil {
-		return windowStyle.
+		content = windowStyle.
 			Width(curM.width).
-			Height(curM.height).
+			Height(height).
 			Render(errorStyle.Render(fmt.Sprintf("❌ Error: %v", curM.err)))
-	}
-
-	if curM.isFilterOpen {
+	} else if curM.isFilterOpen {
 		searchContent := lipgloss.JoinVertical(lipgloss.Left,
 			titleStyle.Render("🌤️ Weather Search"),
 			curM.textInput.View(),
 			"",
 			curM.searchResults.View(),
 		)
-		return windowStyle.
+		content = windowStyle.
 			Width(curM.width).
-			Height(curM.height).
+			Height(height).
 			Render(searchContent)
+	} else if curM.curItem != nil && curM.curWeather != nil {
+		content = renderWeather(curM.curWeather, curM.width, height)
+	} else {
+		content = windowStyle.
+			Width(curM.width).
+			Height(height).
+			Render("Loading...")
 	}
 
-	if curM.curItem != nil && curM.curWeather != nil {
-		return renderWeather(curM.curWeather, curM.width, curM.height)
-	}
-
-	return windowStyle.
-		Width(curM.width).
-		Height(curM.height).
-		Render("Loading...")
-
+	return lipgloss.JoinVertical(lipgloss.Left, content, helpView)
 }

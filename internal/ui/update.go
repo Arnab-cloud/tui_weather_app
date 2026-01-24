@@ -42,7 +42,7 @@ func (curM StateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		switch {
 
-		case key.Matches(msg, curM.keys.quitApp) && !curM.textInput.Focused():
+		case key.Matches(msg, curM.keys.quit) && !curM.textInput.Focused():
 			return curM, tea.Quit
 
 		case key.Matches(msg, curM.keys.toggleFilter):
@@ -67,7 +67,7 @@ func (curM StateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmd = curM.performWeatherSearch()
 			}
 			return curM, cmd
-		case key.Matches(msg, curM.keys.escInput):
+		case key.Matches(msg, curM.keys.back):
 			if curM.textInput.Focused() {
 				curM.textInput.Blur()
 				return curM, nil

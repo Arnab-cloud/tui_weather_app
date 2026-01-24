@@ -6,38 +6,50 @@ import (
 
 type itemsKeyMap struct {
 	choose       key.Binding
-	toggleFilter key.Binding
-	quitApp      key.Binding
-	escInput     key.Binding
-}
-
-func (dKeyMp itemsKeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{dKeyMp.escInput, dKeyMp.choose, dKeyMp.toggleFilter, dKeyMp.quitApp}
-}
-
-func (dKeyMp itemsKeyMap) FullHelp() [][]key.Binding {
-	return [][]key.Binding{
-		{dKeyMp.choose, dKeyMp.toggleFilter, dKeyMp.quitApp, dKeyMp.escInput},
-	}
+	toggleFilter key.Binding // "/"
+	up           key.Binding // "k"
+	down         key.Binding // "j"
+	back         key.Binding // "esc"
+	quit         key.Binding // "q"
 }
 
 func newItemsKeyMap() *itemsKeyMap {
 	return &itemsKeyMap{
 		choose: key.NewBinding(
 			key.WithKeys("enter"),
-			key.WithHelp("enter", "Enter to select"),
+			key.WithHelp("enter", "select"),
 		),
 		toggleFilter: key.NewBinding(
 			key.WithKeys("/"),
-			key.WithHelp("/", "Toggle filter"),
+			key.WithHelp("/", "filter"),
 		),
-		quitApp: key.NewBinding(
-			key.WithKeys("q", "ctrl+c"),
-			key.WithHelp("q", "close app"),
+		up: key.NewBinding(
+			key.WithKeys("k", "up"),
+			key.WithHelp("k", "up"),
 		),
-		escInput: key.NewBinding(
+		down: key.NewBinding(
+			key.WithKeys("j", "down"),
+			key.WithHelp("j", "down"),
+		),
+		back: key.NewBinding(
 			key.WithKeys("esc"),
-			key.WithHelp("esc", "esc from input"),
+			key.WithHelp("esc", "back/cancel"),
 		),
+		quit: key.NewBinding(
+			key.WithKeys("q", "ctrl+c"),
+			key.WithHelp("q", "quit"),
+		),
+	}
+}
+
+// Help helpers
+func (k itemsKeyMap) ShortHelp() []key.Binding {
+	return []key.Binding{k.toggleFilter, k.back, k.choose, k.quit}
+}
+
+func (k itemsKeyMap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{k.up, k.down, k.choose},
+		{k.toggleFilter, k.back, k.quit},
 	}
 }

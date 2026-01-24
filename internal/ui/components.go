@@ -68,11 +68,6 @@ func renderWeather(weather *weather.WeatherResponse, width, height int) string {
 
 	sunSection := renderSection("Sun Times", sunContent, width-10, blue)
 
-	// Footer
-	footer := lipgloss.NewStyle().
-		Foreground(comment).
-		Render("Press 'q' to quit • 's' to search")
-
 	// Assemble full view
 	fullView := lipgloss.JoinVertical(lipgloss.Left,
 		hero,
@@ -80,8 +75,6 @@ func renderWeather(weather *weather.WeatherResponse, width, height int) string {
 		atmosphere,
 		"",
 		sunSection,
-		"",
-		footer,
 	)
 
 	return windowStyle.

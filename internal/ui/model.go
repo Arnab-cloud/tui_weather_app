@@ -71,6 +71,7 @@ func NewModel(service *weather.WeatherService) StateModel {
 	}
 	newModel.searchResults.Title = "Find Cities"
 	newModel.searchResults.SetShowFilter(false)
+	newModel.searchResults.SetShowHelp(false)
 	newModel.searchResults.SetFilteringEnabled(false)
 
 	return newModel

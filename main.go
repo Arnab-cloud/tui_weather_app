@@ -6,14 +6,11 @@ import (
 	"github/Arnab-cloud/tui_weather_app/internal/weather"
 	"log"
 	"os"
-	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
 )
-
-const DebounceDuration = 500 * time.Millisecond
 
 var Service *weather.WeatherService
 
