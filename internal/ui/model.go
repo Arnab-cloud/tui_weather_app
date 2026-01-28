@@ -23,6 +23,8 @@ type StateModel struct {
 	debounceId        int
 	width             int
 	height            int
+
+	logging bool
 }
 
 type citySearchResultMsg struct {

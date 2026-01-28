@@ -5,3 +5,5 @@ tui_weather_app.exe
 *.log
 
 TODO.md
+# Added by goreleaser init:
+dist/
