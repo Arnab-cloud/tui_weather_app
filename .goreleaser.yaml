@@ -19,7 +19,7 @@ builds:
   - main: .
     binary: tui_weather_app
     env:
-      - CGO_ENABLED=1
+      - CGO_ENABLED=0
     goos:
       - linux
       - windows
