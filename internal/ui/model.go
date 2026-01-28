@@ -6,7 +6,6 @@ import (
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
 )
 
 type StateModel struct {
@@ -24,10 +23,6 @@ type StateModel struct {
 	debounceId        int
 	width             int
 	height            int
-}
-
-func (curM StateModel) Init() tea.Cmd {
-	return nil
 }
 
 type citySearchResultMsg struct {

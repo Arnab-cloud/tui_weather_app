@@ -46,6 +46,7 @@ func (curM StateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return curM, tea.Quit
 
 		case key.Matches(msg, curM.keys.toggleFilter):
+			log.Print("filter is toggled")
 			if !curM.isFilterOpen {
 				curM.isFilterOpen = true
 				return curM, curM.textInput.Focus()

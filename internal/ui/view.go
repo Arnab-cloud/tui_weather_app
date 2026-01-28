@@ -7,10 +7,10 @@ import (
 )
 
 func (curM StateModel) View() string {
-	helpView := curM.help.View(curM.keys)
-	height := max(curM.height-lipgloss.Height(helpView), 0)
-
 	var content string
+
+	helpView := curM.renderContextualHelp()
+	height := max(curM.height-lipgloss.Height(helpView), 0)
 
 	if curM.err != nil {
 		content = windowStyle.
@@ -38,4 +38,12 @@ func (curM StateModel) View() string {
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left, content, helpView)
+}
+
+func (curM StateModel) renderContextualHelp() string {
+	contextualBindings := curM.keys.GetContextualHelp(curM.isFilterOpen, curM.textInput.Focused())
+
+	helpKeys := &contextualKeyMap{bindings: contextualBindings}
+
+	return curM.help.View(helpKeys)
 }
