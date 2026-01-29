@@ -12,6 +12,8 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+var VERSION = "dev"
+
 func main() {
 
 	appDir, err := createUserAppDir()
