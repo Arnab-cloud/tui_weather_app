@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"github/Arnab-cloud/tui_weather_app/internal/ui"
 	"github/Arnab-cloud/tui_weather_app/internal/weather"
 	"log"
@@ -18,7 +19,7 @@ var VERSION = "dev"
 func main() {
 
 	if len(os.Args) > 1 && os.Args[1] == "--version" {
-		// fmt.Print(VERSION)
+		fmt.Print(VERSION)
 		return
 	}
 
