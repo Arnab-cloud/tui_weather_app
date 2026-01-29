@@ -1,6 +1,6 @@
 # TUI Weather App 🌦️
 
-A simple terminal-based weather application written in **Go**, built using **Bubble Tea**.
+A simple terminal-based weather application written in **Go**, built using **Bubble Tea** framework.
 
 The app fetches weather data from a public weather API and displays it in an interactive terminal UI. It also includes features like fuzzy finding for cities and caching of weather data for quicker access.
 
@@ -18,9 +18,9 @@ The app fetches weather data from a public weather API and displays it in an int
 
 ---
 
-## Screenshots
+## Demo
 
-*(Optional — add screenshots here if you want)*
+<img alt="TUI Weather App Demo" src="assets/demo.gif" />
 
 ---
 
@@ -72,7 +72,7 @@ Execute the binary from your terminal:
     On Windows, you can simply double-click the `.exe` file or run it from Command Prompt/PowerShell:
 
     ```/dev/null/cmd#L1-1
-    .\tui_weather_app_windows_amd64.exe
+    .\\tui_weather_app_windows_amd64.exe
     ```
 
 ---
