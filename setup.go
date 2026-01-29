@@ -15,6 +15,7 @@ import (
 var (
 	GEOCODING_API string = ""
 	WEATHER_API   string = ""
+	API_KEY       string = ""
 )
 
 //go:embed small.db.gz
@@ -69,9 +70,10 @@ func ensureDatabase(appDir string) (string, error) {
 }
 
 func GetEnvVariables() (ApiKey, WeatherApi, GeocodingApi string) {
-	ApiKey = os.Getenv("API_KEY")
-	if ApiKey == "" {
-		log.Fatal("API_KEY is required. Set it as an environment variable.")
+	if API_KEY == "" {
+		ApiKey = os.Getenv("API_KEY")
+	} else {
+		ApiKey = API_KEY
 	}
 
 	if WEATHER_API == "" {
@@ -86,8 +88,14 @@ func GetEnvVariables() (ApiKey, WeatherApi, GeocodingApi string) {
 		GeocodingApi = GEOCODING_API
 	}
 
-	if WeatherApi == "" || GeocodingApi == "" {
-		log.Fatal("WeatherApi or Geocoding Api is missing")
+	if ApiKey == "" {
+		log.Fatal("ApiKey is missing")
+	}
+	if WeatherApi == "" {
+		log.Fatal("WeatherApi is missing")
+	}
+	if GeocodingApi == "" {
+		log.Fatal("GeocodingApi is missing")
 	}
 
 	return

@@ -4,6 +4,8 @@ tui_weather_app.exe
 *.json
 *.log
 
+.goreleaser.yaml
+
 TODO.md
 # Added by goreleaser init:
 dist/

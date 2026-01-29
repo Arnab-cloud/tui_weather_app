@@ -18,7 +18,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error creating user app dir: %s", err)
 	}
-	_ = godotenv.Load("release.env", ".env", filepath.Join(appDir, "weather.env"))
+	_ = godotenv.Load(".env", filepath.Join(appDir, "weather.env"))
 
 	LogFile, err := tea.LogToFile("logs.log", "debug")
 	if err != nil {

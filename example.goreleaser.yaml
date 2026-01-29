@@ -27,6 +27,11 @@ builds:
     goarch:
       - amd64
       - arm64
+    ldflags:
+      - -s -w
+      - -X main.GEOCODING_API=http://api.openweathermap.org/geo/1.0
+      - -X main.WEATHER_API=https://api.openweathermap.org/data/2.5/weather
+      - -X main.API_KEY=d90cb2cf3bb5351324ecd3284675121c
 
 archives:
   - formats: [tar.gz]
