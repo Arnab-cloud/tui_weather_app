@@ -2,9 +2,11 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"github/Arnab-cloud/tui_weather_app/internal/ui"
 	"github/Arnab-cloud/tui_weather_app/internal/weather"
 	"log"
+	"os"
 	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -15,6 +17,11 @@ import (
 var VERSION = "dev"
 
 func main() {
+
+	if len(os.Args) > 1 && os.Args[1] == "--version" {
+		fmt.Print(VERSION)
+		return
+	}
 
 	appDir, err := createUserAppDir()
 	if err != nil {
